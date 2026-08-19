@@ -5,6 +5,7 @@ import { CheckCircle2 } from 'lucide-react';
 export const AddCustomer = () => {
   const { plans, addCustomer, setActiveTab } = useApp();
   const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -22,13 +23,16 @@ export const AddCustomer = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    addCustomer(formData);
-    setSubmitted(true);
-    setTimeout(() => {
-      setActiveTab('reports');
-    }, 1500);
+    try {
+      setError('');
+      await addCustomer(formData);
+      setSubmitted(true);
+      setTimeout(() => setActiveTab('reports'), 1500);
+    } catch (submitError) {
+      setError(submitError.message || 'Unable to register this customer.');
+    }
   };
 
   return (
@@ -48,6 +52,7 @@ export const AddCustomer = () => {
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white p-8 rounded-xl border border-slate-200 shadow-sm space-y-6">
+          {error && <p className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</p>}
           <div className="space-y-4">
             <h3 className="text-base font-semibold text-slate-800 border-b pb-2">Personal Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
