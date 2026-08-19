@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { collection, getFirestore, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { firebaseApp } from '../lib/firebase';
+import { apiRequest } from '../lib/api';
 
 export const UserManagement = () => {
   const { user, setUserRole } = useAuth();
@@ -11,11 +10,9 @@ export const UserManagement = () => {
   const [updatingUid, setUpdatingUid] = useState(null);
 
   useEffect(() => {
-    const db = getFirestore(firebaseApp);
-    const usersQuery = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
-    return onSnapshot(usersQuery, (snapshot) => {
-      setUsers(snapshot.docs.map((document) => ({ uid: document.id, ...document.data() })));
-    }, () => setError('Unable to load users. Confirm the Firestore security rules are deployed.'));
+    apiRequest('/api/users')
+      .then((accounts) => setUsers(accounts.map((account) => ({ ...account, uid: account.id, displayName: account.display_name, photoURL: account.photo_url }))))
+      .catch(() => setError('Unable to load users. Confirm the backend is running and you have administrator access.'));
   }, []);
 
   const changeRole = async (uid, role) => {
@@ -23,6 +20,7 @@ export const UserManagement = () => {
       setError('');
       setUpdatingUid(uid);
       await setUserRole(uid, role);
+      setUsers((currentUsers) => currentUsers.map((account) => account.uid === uid ? { ...account, role } : account));
     } catch {
       setError('Unable to update this role. Your administrator permissions may have changed.');
     } finally {

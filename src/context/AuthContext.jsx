@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { createUserWithEmailAndPassword, GoogleAuthProvider, onIdTokenChanged, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup, signOut, updateProfile } from 'firebase/auth';
-import { auth, firebaseApp, isFirebaseConfigured } from '../lib/firebase';
+import { auth, isFirebaseConfigured } from '../lib/firebase';
+import { apiRequest } from '../lib/api';
 
 const AuthContext = createContext(null);
 
@@ -23,9 +24,13 @@ export const AuthProvider = ({ children }) => {
         return;
       }
 
-      const token = await currentUser.getIdTokenResult();
       setUser(currentUser);
-      setIsAdmin(token.claims.admin === true);
+      try {
+        const profile = await apiRequest('/api/me');
+        setIsAdmin(profile.role === 'admin');
+      } catch {
+        setIsAdmin(false);
+      }
       setLoading(false);
     });
   }, []);
@@ -56,11 +61,7 @@ export const AuthProvider = ({ children }) => {
   const signOutUser = () => signOut(auth);
 
   const setUserRole = async (uid, role) => {
-    if (!firebaseApp) throw new Error('Firebase is not configured.');
-    const { getFunctions, httpsCallable } = await import('firebase/functions');
-    const functions = getFunctions(firebaseApp);
-    const setRole = httpsCallable(functions, 'setUserRole');
-    await setRole({ uid, role });
+    await apiRequest(`/api/users/${uid}/role`, { method: 'PATCH', body: JSON.stringify({ role }) });
   };
 
   return (
